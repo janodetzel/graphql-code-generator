@@ -277,6 +277,35 @@ describe('TypeScript', () => {
       export type MyEnum = typeof MyEnum[keyof typeof MyEnum];`);
     });
 
+    it('Should work with enum as const combined with deprecated directives', async () => {
+      const schema = buildSchema(/* GraphQL */ `
+        enum MyEnum {
+          A_B_C
+          X_Y_Z
+          _TEST
+          My_Value @deprecated(reason: "Enum value \`My_Value\` has been deprecated.")
+          _123
+        }
+      `);
+      const result = (await plugin(
+        schema,
+        [],
+        { enumsAsConst: true },
+        { outputFile: '' }
+      )) as Types.ComplexPluginOutput;
+
+      expect(result.content).toBeSimilarStringTo(`
+      export const MyEnum = {
+        ABC: 'A_B_C',
+        XYZ: 'X_Y_Z',
+        Test: '_TEST',
+        /** @deprecated Enum value \`My_Value\` has been deprecated. */
+        MyValue: 'My_Value',
+        '123': '_123'
+      } as const;
+      export type MyEnum = typeof MyEnum[keyof typeof MyEnum];`);
+    });
+
     it('Should work with enum and enum values (enumsAsTypes)', async () => {
       const schema = buildSchema(/* GraphQL */ `
         "custom enum"
